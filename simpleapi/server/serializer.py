@@ -30,7 +30,7 @@ class SerializedObject(object):
             serializer = DjangoModelSerializer(self.obj, **self.options)
         elif has_django and isinstance(self.obj, QuerySet):
             serializer = DjangoQuerySetSerializer(self.obj, **self.options)
-        elif has_mongoengine and isinstance(self.obj, mongoengine.Document):
+        elif has_mongoengine and isinstance(self.obj, mongoengine.document.BaseDocument):
             serializer = MongoDocumentSerializer(self.obj, **self.options)
         elif has_mongoengine and isinstance(self.obj, mongoengine.queryset.QuerySet):
             serializer = MongoQuerySetSerializer(self.obj, **self.options)
@@ -69,7 +69,7 @@ class Serializer(object):
 class MongoDocumentSerializer(Serializer):
 
     def serialize(self):
-        assert isinstance(self.obj, mongoengine.Document)
+        assert isinstance(self.obj, mongoengine.document.BaseDocument)
         
         result = {}
         self.handle_document(self.obj, result)
@@ -80,11 +80,22 @@ class MongoDocumentSerializer(Serializer):
         
         if isinstance(value, pymongo.objectid.ObjectId):
             value = str(value)
-        elif isinstance(value, mongoengine.EmbeddedDocument):
+        elif isinstance(value, mongoengine.document.BaseDocument):
             scope[field] = {}
             self.handle_document(value, scope[field])
+        elif isinstance(value, list):
+            scope[field] = []
+            self.handle_list_field(value, scope[field])
         else:
             scope[field] = value
+    
+    def handle_list_field(self, items, scope=[]):
+        for i, item in enumerate(items):
+            if isinstance(item, mongoengine.document.BaseDocument):
+                scope.append({})
+                self.handle_document(item, scope[i])
+            else:
+                scope[i] = item
     
     def handle_document(self, doc, scope):
         for field in doc._fields:
