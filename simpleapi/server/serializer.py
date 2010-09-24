@@ -95,7 +95,7 @@ class MongoDocumentSerializer(Serializer):
                 scope.append({})
                 self.handle_document(item, scope[i])
             else:
-                scope[i] = item
+                scope.append(item)
     
     def handle_document(self, doc, scope):
         for field in doc._fields:
